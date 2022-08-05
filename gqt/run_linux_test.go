@@ -417,15 +417,20 @@ var _ = Describe("Run", func() {
 				Expect(os.RemoveAll(propertiesDir)).To(Succeed())
 			})
 
-			It("does not deadlock", func(done Done) {
-				_, err := container.Run(garden.ProcessSpec{
-					Path: "ps",
-				}, garden.ProcessIO{
-					Stderr: gbytes.NewBuffer(),
-				})
-				Expect(err).To(MatchError(ContainSubstring("exit status 100")))
+			It("does not deadlock", func() {
+				done := make(chan interface{})
+				timeout := 30
+				go func() {
+					_, err := container.Run(garden.ProcessSpec{
+						Path: "ps",
+					}, garden.ProcessIO{
+						Stderr: gbytes.NewBuffer(),
+					})
+					Expect(err).To(MatchError(ContainSubstring("exit status 100")))
 
-				close(done)
+					close(done)
+				}()
+				Eventually(done, timeout).Should(BeClosed())
 			}, 30.0)
 		})
 
